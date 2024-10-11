@@ -101,3 +101,28 @@ if __name__ == "__main__":
 
     logger.info("Starting the XAI program...")
     main(args.file_path, args.target_column)
+
+from explainableai import XAIWrapper
+from sklearn.datasets import load_iris
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+
+# Load sample dataset
+X, y = load_iris(return_X_y=True, as_frame=True)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Initialize ExplainableAI wrapper
+xai = XAIWrapper()
+
+# Train a RandomForest model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+xai.fit(model, X_train, y_train)
+
+# Analyze the model and get enhanced LLM explanation
+results = xai.analyze(X_test, y_test, model)
+
+# Print the enhanced LLM explanation
+print(results['llm_explanation'])
+
+# Optionally generate a report
+xai.generate_report('model_analysis_with_eda_shap.pdf')
