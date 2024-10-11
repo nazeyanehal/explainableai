@@ -193,3 +193,97 @@ def test_xai_wrapper_predict_invalid_input(sample_data, sample_models, invalid_i
             xai.explain_prediction(invalid_input)
     except Exception as e:
         logger.error(f"An error occurred while testing XAIWrapper predict invalid input: {str(e)}")
+
+import pandas as pd
+import shap
+from pandas_profiling import ProfileReport
+
+class XAIWrapper:
+    def __init__(self):
+        # Your existing initialization code
+        pass
+
+    def fit(self, model, X_train, y_train):
+        # Fit the model (unchanged)
+        model.fit(X_train, y_train)
+        self.model = model
+
+    def analyze(self, X_test, y_test, model):
+        # Perform EDA
+        eda_insights = self.perform_eda(X_test)
+
+        # Perform SHAP Analysis
+        shap_summary = self.perform_shap_analysis(X_test, model)
+
+        # Get model performance
+        model_performance = self.evaluate_model(model, X_test, y_test)
+
+        # Generate the LLM prompt with additional EDA and SHAP data
+        prompt = self.generate_llm_prompt(eda_insights, shap_summary, model_performance)
+
+        # Get LLM explanation using the enhanced prompt
+        llm_explanation = self.get_llm_explanation(prompt)
+
+        return {"llm_explanation": llm_explanation}
+
+    def perform_eda(self, X):
+        # Perform EDA using pandas-profiling or another EDA library
+        eda_report = ProfileReport(X, title="EDA Report", explorative=True)
+        eda_report.to_file("eda_report.html")  # Optional: Generate an HTML report
+
+        # Extract important insights like missing values and correlations
+        eda_insights = {
+            "missing_values": X.isnull().sum().sum(),
+            "correlations": X.corr().to_dict(),
+        }
+
+        # Convert insights to a text-based summary for LLM prompt
+        eda_summary = f"The dataset has {eda_insights['missing_values']} missing values. Correlations are: {eda_insights['correlations']}."
+        return eda_summary
+
+    def perform_shap_analysis(self, X, model):
+        # Create a SHAP explainer and calculate SHAP values
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X)
+
+        # Generate SHAP summary for feature importance
+        shap_feature_importance = pd.DataFrame({
+            'feature': X.columns,
+            'importance': abs(shap_values).mean(axis=0)
+        }).sort_values(by='importance', ascending=False)
+
+        # Create a SHAP-based explanation for the LLM prompt
+        shap_summary = f"The most important feature is {shap_feature_importance.iloc[0]['feature']} with an average SHAP value of {shap_feature_importance.iloc[0]['importance']}."
+        return shap_summary
+
+    def evaluate_model(self, model, X_test, y_test):
+        # Evaluate model performance (accuracy, precision, etc.)
+        accuracy = model.score(X_test, y_test)
+        # Other metrics can be added as needed (precision, recall, etc.)
+        return {
+            'accuracy': accuracy,
+            # 'precision': ...,
+            # 'recall': ...,
+        }
+
+    def generate_llm_prompt(self, eda_insights, shap_summary, model_performance):
+        # Create an LLM prompt that includes EDA, SHAP, and model performance data
+        prompt = f"""
+        Based on the dataset's analysis:
+        - {eda_insights}
+        - {shap_summary}
+
+        The model achieved an accuracy of {model_performance['accuracy']}.
+        Please provide an explanation of the model's behavior and key insights.
+        """
+        return prompt
+
+    def get_llm_explanation(self, prompt):
+        # Call the LLM service with the generated prompt (Placeholder: replace with actual LLM API call)
+        llm_explanation = f"LLM Explanation based on the following prompt: {prompt}"
+        return llm_explanation
+
+    def generate_report(self, filename):
+        # Optional: Add a function to generate PDF reports
+        with open(filename, 'w') as f:
+            f.write("Generated report content here.")
